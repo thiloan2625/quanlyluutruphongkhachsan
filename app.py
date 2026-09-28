@@ -1,10 +1,10 @@
 import streamlit as st
-import sqlite3
-from pathlib import Path
+import pymysql
+from pymysql.cursors import DictCursor
 from datetime import date, datetime, timedelta
 import pandas as pd
 import random
-
+st.image("VT.jpg")
 # ============================================================
 # CẤU HÌNH ỨNG DỤNG
 # ============================================================
@@ -16,7 +16,24 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-DB_FILE = Path("hotel_management.db")
+# ============================================================
+# AIVEN MYSQL DATABASE
+# ============================================================
+DB_CONFIG = {
+    "host": "mysql-16835565-phamloan20052021-5585.a.aivencloud.com",
+    "port": 20173,
+    "user": "avnadmin",
+    "password": "AVNS_4Y53MuDonSf1vyjhBby",
+    "database": "defaultdb",
+    "charset": "utf8mb4",
+    "cursorclass": DictCursor,
+    "connect_timeout": 15,
+    "read_timeout": 30,
+    "write_timeout": 30,
+    "autocommit": False,
+    # Aiven MySQL normally requires TLS.
+    "ssl": {"check_hostname": False},
+}
 
 ROOM_STATUSES = [
     "Trống",
@@ -61,9 +78,8 @@ STATUS_COLORS = {
 
 
 def get_connection():
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    return conn
+    """Create a new connection to Aiven MySQL."""
+    return pymysql.connect(**DB_CONFIG)
 
 
 def init_database():
@@ -73,57 +89,56 @@ def init_database():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS rooms (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            room_number TEXT UNIQUE NOT NULL,
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            room_number VARCHAR(50) UNIQUE NOT NULL,
             floor INTEGER NOT NULL,
-            room_type TEXT NOT NULL,
-            price REAL NOT NULL,
-            status TEXT NOT NULL DEFAULT 'Trống',
-            guest_name TEXT DEFAULT '',
-            guest_phone TEXT DEFAULT '',
-            guest_email TEXT DEFAULT '',
-            check_in TEXT DEFAULT '',
-            check_out TEXT DEFAULT '',
+            room_type VARCHAR(100) NOT NULL,
+            price DECIMAL(15,2) NOT NULL,
+            status VARCHAR(50) NOT NULL DEFAULT 'Trống',
+            guest_name VARCHAR(255) DEFAULT '',
+            guest_phone VARCHAR(50) DEFAULT '',
+            guest_email VARCHAR(255) DEFAULT '',
+            check_in VARCHAR(20) DEFAULT '',
+            check_out VARCHAR(20) DEFAULT '',
             adults INTEGER DEFAULT 0,
             children INTEGER DEFAULT 0,
-            note TEXT DEFAULT '',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            note VARCHAR(1000) DEFAULT '',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS bookings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            room_number TEXT NOT NULL,
-            guest_name TEXT NOT NULL,
-            phone TEXT DEFAULT '',
-            email TEXT DEFAULT '',
-            check_in TEXT NOT NULL,
-            check_out TEXT NOT NULL,
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            room_number VARCHAR(50) NOT NULL,
+            guest_name VARCHAR(255) NOT NULL,
+            phone VARCHAR(50) DEFAULT '',
+            email VARCHAR(255) DEFAULT '',
+            check_in VARCHAR(20) NOT NULL,
+            check_out VARCHAR(20) NOT NULL,
             adults INTEGER DEFAULT 1,
             children INTEGER DEFAULT 0,
-            room_price REAL DEFAULT 0,
-            status TEXT DEFAULT 'Đã đặt',
-            note TEXT DEFAULT '',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            room_price DECIMAL(15,2) DEFAULT 0,
+            status VARCHAR(50) DEFAULT 'Đã đặt',
+            note VARCHAR(1000) DEFAULT '',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS activity_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            action TEXT NOT NULL,
-            room_number TEXT DEFAULT '',
-            description TEXT DEFAULT '',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            action VARCHAR(100) NOT NULL,
+            room_number VARCHAR(50) DEFAULT '',
+            description VARCHAR(1000) DEFAULT '',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
     conn.commit()
 
-    count = cursor.execute(
-        "SELECT COUNT(*) FROM rooms"
-    ).fetchone()[0]
+    cursor.execute("SELECT COUNT(*) AS total FROM rooms")
+    count = cursor.fetchone()["total"]
 
     # ========================================================
     # TẠO 200 PHÒNG MẪU
@@ -291,7 +306,7 @@ def init_database():
                 children,
                 note
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, sample_rooms)
 
         conn.commit()
@@ -307,6 +322,7 @@ def init_database():
 def get_rooms():
 
     conn = get_connection()
+    cursor = conn.cursor()
 
     df = pd.read_sql_query("""
         SELECT *
@@ -322,15 +338,17 @@ def get_rooms():
 def get_room(room_number):
 
     conn = get_connection()
+    cursor = conn.cursor()
 
-    room = conn.execute(
+    cursor.execute(
         """
         SELECT *
         FROM rooms
-        WHERE room_number = ?
+        WHERE room_number = %s
         """,
         (room_number,),
-    ).fetchone()
+    )
+    room = cursor.fetchone()
 
     conn.close()
 
@@ -340,6 +358,7 @@ def get_room(room_number):
 def get_bookings():
 
     conn = get_connection()
+    cursor = conn.cursor()
 
     df = pd.read_sql_query("""
         SELECT *
@@ -355,6 +374,7 @@ def get_bookings():
 def get_logs():
 
     conn = get_connection()
+    cursor = conn.cursor()
 
     df = pd.read_sql_query("""
         SELECT *
@@ -375,8 +395,9 @@ def log_activity(
 ):
 
     conn = get_connection()
+    cursor = conn.cursor()
 
-    conn.execute(
+    cursor.execute(
         """
         INSERT INTO activity_logs
         (
@@ -384,7 +405,7 @@ def log_activity(
             room_number,
             description
         )
-        VALUES (?, ?, ?)
+        VALUES (%s, %s, %s)
         """,
         (
             action,
@@ -408,12 +429,13 @@ def update_room_status(
 ):
 
     conn = get_connection()
+    cursor = conn.cursor()
 
-    conn.execute(
+    cursor.execute(
         """
         UPDATE rooms
-        SET status = ?
-        WHERE room_number = ?
+        SET status = %s
+        WHERE room_number = %s
         """,
         (
             new_status,
@@ -444,21 +466,22 @@ def check_in_guest(
 ):
 
     conn = get_connection()
+    cursor = conn.cursor()
 
-    conn.execute(
+    cursor.execute(
         """
         UPDATE rooms
         SET
             status = 'Đang ở',
-            guest_name = ?,
-            guest_phone = ?,
-            guest_email = ?,
-            check_in = ?,
-            check_out = ?,
-            adults = ?,
-            children = ?,
-            note = ?
-        WHERE room_number = ?
+            guest_name = %s,
+            guest_phone = %s,
+            guest_email = %s,
+            check_in = %s,
+            check_out = %s,
+            adults = %s,
+            children = %s,
+            note = %s
+        WHERE room_number = %s
         """,
         (
             guest_name,
@@ -493,8 +516,9 @@ def check_out_guest(room_number):
     guest_name = room["guest_name"]
 
     conn = get_connection()
+    cursor = conn.cursor()
 
-    conn.execute(
+    cursor.execute(
         """
         UPDATE rooms
         SET
@@ -506,7 +530,7 @@ def check_out_guest(room_number):
             check_out = '',
             adults = 0,
             children = 0
-        WHERE room_number = ?
+        WHERE room_number = %s
         """,
         (room_number,),
     )
@@ -540,8 +564,9 @@ def create_booking(
 ):
 
     conn = get_connection()
+    cursor = conn.cursor()
 
-    conn.execute(
+    cursor.execute(
         """
         INSERT INTO bookings (
             room_number,
@@ -556,7 +581,7 @@ def create_booking(
             status,
             note
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Đã đặt', ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'Đã đặt', %s)
         """,
         (
             room_number,
@@ -572,19 +597,19 @@ def create_booking(
         ),
     )
 
-    conn.execute(
+    cursor.execute(
         """
         UPDATE rooms
         SET
             status = 'Đã đặt',
-            guest_name = ?,
-            guest_phone = ?,
-            guest_email = ?,
-            check_in = ?,
-            check_out = ?,
-            adults = ?,
-            children = ?
-        WHERE room_number = ?
+            guest_name = %s,
+            guest_phone = %s,
+            guest_email = %s,
+            check_in = %s,
+            check_out = %s,
+            adults = %s,
+            children = %s
+        WHERE room_number = %s
         """,
         (
             guest_name,
@@ -623,10 +648,11 @@ def add_room(
 ):
 
     conn = get_connection()
+    cursor = conn.cursor()
 
     try:
 
-        conn.execute(
+        cursor.execute(
             """
             INSERT INTO rooms (
                 room_number,
@@ -636,7 +662,7 @@ def add_room(
                 status,
                 note
             )
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """,
             (
                 room_number,
@@ -652,11 +678,13 @@ def add_room(
 
         success = True
 
-    except sqlite3.IntegrityError:
+    except pymysql.err.IntegrityError:
 
+        conn.rollback()
         success = False
 
-    conn.close()
+    finally:
+        conn.close()
 
     if success:
 
@@ -680,20 +708,21 @@ def update_room(
 ):
 
     conn = get_connection()
+    cursor = conn.cursor()
 
     try:
 
-        conn.execute(
+        cursor.execute(
             """
             UPDATE rooms
             SET
-                room_number = ?,
-                floor = ?,
-                room_type = ?,
-                price = ?,
-                status = ?,
-                note = ?
-            WHERE id = ?
+                room_number = %s,
+                floor = %s,
+                room_type = %s,
+                price = %s,
+                status = %s,
+                note = %s
+            WHERE id = %s
             """,
             (
                 room_number,
@@ -710,11 +739,13 @@ def update_room(
 
         success = True
 
-    except sqlite3.IntegrityError:
+    except pymysql.err.IntegrityError:
 
+        conn.rollback()
         success = False
 
-    conn.close()
+    finally:
+        conn.close()
 
     if success:
 
@@ -733,11 +764,12 @@ def delete_room(
 ):
 
     conn = get_connection()
+    cursor = conn.cursor()
 
-    conn.execute(
+    cursor.execute(
         """
         DELETE FROM rooms
-        WHERE id = ?
+        WHERE id = %s
         """,
         (room_id,),
     )
@@ -2427,7 +2459,16 @@ def sidebar():
 
 def main():
 
-    init_database()
+    try:
+        init_database()
+    except Exception as e:
+        st.error("Không thể kết nối MySQL Aiven hoặc khởi tạo database.")
+        st.code(str(e))
+        st.info(
+            "Kiểm tra host, port, user, password, tên database và SSL của Aiven; "
+            "sau đó tải lại ứng dụng."
+        )
+        st.stop()
 
     load_css()
 
