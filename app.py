@@ -1,7 +1,7 @@
 import streamlit as st
-import pymysql
-from pymysql.cursors import DictCursor
-from datetime import date, datetime, timedelta
+
+
+
 import pandas as pd
 import random
 
