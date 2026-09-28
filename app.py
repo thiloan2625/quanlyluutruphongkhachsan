@@ -115,7 +115,7 @@ def init_database():
 
                 if number == 1 and floor == 1:
                     status = "Đang ở"
-                    guest = "Nguyễn Văn An"
+                    guest = "Nguyễn Mỹ Linh"
                     phone = "0901234567"
                     check_in = date.today().isoformat()
                     check_out = date.today().isoformat()
@@ -146,11 +146,11 @@ def init_database():
 
                 room_type = ["Standard", "Superior", "Deluxe", "Suite", "Family"][number - 1]
                 price = {
-                    "Standard": 800000,
-                    "Superior": 1100000,
-                    "Deluxe": 1500000,
-                    "Suite": 2200000,
-                    "Family": 2800000,
+                    "Standard": 2000000,
+                    "Superior": 2800000,
+                    "Deluxe": 15000000,
+                    "Suite": 32000000,
+                    "Family": 5000000,
                 }[room_type]
 
                 sample_rooms.append(
