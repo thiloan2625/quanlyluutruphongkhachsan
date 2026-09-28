@@ -1,7 +1,7 @@
 import streamlit as st
-
-
-
+import pymysql
+from pymysql.cursors import DictCursor
+from datetime import date, datetime, timedelta
 import pandas as pd
 import random
 
@@ -26,7 +26,7 @@ DB_CONFIG = {
     "password": "AVNS_4Y53MuDonSf1vyjhBby",
     "database": "defaultdb",
     "charset": "utf8mb4",
-    
+    "cursorclass": DictCursor,
     "connect_timeout": 15,
     "read_timeout": 30,
     "write_timeout": 30,
@@ -320,20 +320,17 @@ def init_database():
 
 
 def get_rooms():
-
     conn = get_connection()
-    cursor = conn.cursor()
-
-    df = pd.read_sql_query("""
-        SELECT *
-        FROM rooms
-        ORDER BY floor, room_number
-    """, conn)
-
-    conn.close()
-
-    return df
-
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT *
+            FROM rooms
+            ORDER BY floor, room_number
+        """)
+        return pd.DataFrame(cursor.fetchall())
+    finally:
+        conn.close()
 
 def get_room(room_number):
 
@@ -356,37 +353,31 @@ def get_room(room_number):
 
 
 def get_bookings():
-
     conn = get_connection()
-    cursor = conn.cursor()
-
-    df = pd.read_sql_query("""
-        SELECT *
-        FROM bookings
-        ORDER BY check_in ASC, id DESC
-    """, conn)
-
-    conn.close()
-
-    return df
-
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT *
+            FROM bookings
+            ORDER BY check_in ASC, id DESC
+        """)
+        return pd.DataFrame(cursor.fetchall())
+    finally:
+        conn.close()
 
 def get_logs():
-
     conn = get_connection()
-    cursor = conn.cursor()
-
-    df = pd.read_sql_query("""
-        SELECT *
-        FROM activity_logs
-        ORDER BY id DESC
-        LIMIT 200
-    """, conn)
-
-    conn.close()
-
-    return df
-
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT *
+            FROM activity_logs
+            ORDER BY id DESC
+            LIMIT 200
+        """)
+        return pd.DataFrame(cursor.fetchall())
+    finally:
+        conn.close()
 
 def log_activity(
     action,
