@@ -1,6 +1,6 @@
 import streamlit as st
 
-import DictCursor
+
 from datetime import date, datetime, timedelta
 import pandas as pd
 import random
