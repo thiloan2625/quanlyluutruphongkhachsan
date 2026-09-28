@@ -108,7 +108,7 @@ def init_database():
     if count == 0:
         sample_rooms = []
 
-        # 15 phòng mẫu: 101-105, 201-205, 301-305
+        # 150 phòng mẫu: 101-105, 201-205, 301-305
         for floor in [1, 2, 3]:
             for number in range(1, 6):
                 room_number = f"{floor}{number:02d}"
