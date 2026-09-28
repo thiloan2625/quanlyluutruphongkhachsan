@@ -26,7 +26,7 @@ DB_CONFIG = {
     "password": "AVNS_4Y53MuDonSf1vyjhBby",
     "database": "defaultdb",
     "charset": "utf8mb4",
-    "cursorclass": DictCursor,
+    
     "connect_timeout": 15,
     "read_timeout": 30,
     "write_timeout": 30,
