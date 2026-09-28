@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import date, timedelta
 import mysql.connector
 from mysql.connector import Error
-
+st.image(VT.jpg")
 # ============================================================
 # 1. CẤU HÌNH ỨNG DỤNG
 # ============================================================
