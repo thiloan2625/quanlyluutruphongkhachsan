@@ -105,53 +105,104 @@ def init_database():
     # Tạo dữ liệu phòng mẫu nếu database chưa có phòng
     count = cursor.execute("SELECT COUNT(*) FROM rooms").fetchone()[0]
 
+# TẠO 200 PHÒNG MẪU
+    # 10 TẦNG - 20 PHÒNG / TẦNG
+    # ========================================================
+
     if count == 0:
+
         sample_rooms = []
 
-        # 150 phòng mẫu: 101-105, 201-205, 301-305
-        for floor in [1, 2, 3]:
-            for number in range(1, 6):
-                room_number = f"{floor}{number:02d}"
+        room_types = [
+            ("Standard", 2000000),
+            ("Superior", 2800000),
+            ("Deluxe", 3200000),
+            ("Premier", 4000000),
+            ("Executive", 4800000),
+            ("Family", 5500000),
+            ("Suite", 6500000),
+            ("VIP Suite", 15000000),
+        ]
 
-                if number == 1 and floor == 1:
+        for floor in range(1, 11):
+
+            for room_index in range(1, 21):
+
+                room_number = f"{floor}{room_index:02d}"
+
+                # Phân bố loại phòng
+                room_type, price = room_types[
+                    (room_index - 1) % len(room_types)
+                ]
+
+                # Phân bố trạng thái phòng
+                position = (
+                    (floor - 1) * 20
+                    + room_index
+                )
+
+                if position % 20 in [1, 2, 3, 4]:
                     status = "Đang ở"
-                    guest = "Nguyễn Mỹ Linh"
-                    phone = "0901234567"
-                    check_in = date.today().isoformat()
-                    check_out = date.today().isoformat()
-                elif number == 2 and floor == 1:
+
+                elif position % 20 in [5, 6, 7]:
                     status = "Đã đặt"
-                    guest = "Trần Thị Mai"
-                    phone = "0912345678"
-                    check_in = ""
-                    check_out = ""
-                elif number == 3 and floor == 2:
+
+                elif position % 20 in [8, 9]:
                     status = "Đang dọn"
-                    guest = ""
-                    phone = ""
-                    check_in = ""
-                    check_out = ""
-                elif number == 4 and floor == 3:
+
+                elif position % 20 == 10:
                     status = "Bảo trì"
-                    guest = ""
-                    phone = ""
-                    check_in = ""
-                    check_out = ""
+
                 else:
                     status = "Trống"
-                    guest = ""
-                    phone = ""
+
+                # Thông tin khách mẫu
+                if status == "Đang ở":
+
+                    guest_name = (
+                        f"Khách lưu trú "
+                        f"{room_number}"
+                    )
+
+                    guest_phone = (
+                        f"090{floor:02d}"
+                        f"{room_index:04d}"
+                    )
+
+                    check_in = date.today().isoformat()
+
+                    check_out = date.today().isoformat()
+
+                elif status == "Đã đặt":
+
+                    guest_name = (
+                        f"Khách đặt phòng "
+                        f"{room_number}"
+                    )
+
+                    guest_phone = (
+                        f"091{floor:02d}"
+                        f"{room_index:04d}"
+                    )
+
+                    check_in = date.today().isoformat()
+
+                    check_out = date.today().isoformat()
+
+                else:
+
+                    guest_name = ""
+                    guest_phone = ""
                     check_in = ""
                     check_out = ""
 
-                room_type = ["Standard", "Superior", "Deluxe", "Suite", "Family"][number - 1]
-                price = {
-                    "Standard": 2000000,
-                    "Superior": 2800000,
-                    "Deluxe": 15000000,
-                    "Suite": 32000000,
-                    "Family": 5000000,
-                }[room_type]
+                note = ""
+
+                if status == "Bảo trì":
+                    note = "Phòng đang được bảo trì"
+
+                elif status == "Đang dọn":
+                    note = "Housekeeping đang vệ sinh"
 
                 sample_rooms.append(
                     (
@@ -160,22 +211,32 @@ def init_database():
                         room_type,
                         price,
                         status,
-                        guest,
-                        phone,
+                        guest_name,
+                        guest_phone,
                         check_in,
                         check_out,
-                        "",
+                        note,
                     )
                 )
 
         cursor.executemany("""
             INSERT INTO rooms
             (
-                room_number, floor, room_type, price, status,
-                guest_name, guest_phone, check_in, check_out, note
+                room_number,
+                floor,
+                room_type,
+                price,
+                status,
+                guest_name,
+                guest_phone,
+                check_in,
+                check_out,
+                note
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, sample_rooms)
+
+       
 
         conn.commit()
 
