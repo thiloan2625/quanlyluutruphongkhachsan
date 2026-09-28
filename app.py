@@ -3,7 +3,7 @@ import sqlite3
 from datetime import datetime, date
 from pathlib import Path
 import pandas as pd
-
+st.image("VT.jpg")
 # ============================================================
 # CẤU HÌNH
 # ============================================================
