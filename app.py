@@ -9,7 +9,7 @@ st.image("VT.jpg")
 # ============================================================
 
 st.set_page_config(
-    page_title="5★ Hotel Management",
+    page_title="5★ Hotel Không Ngán Một Ai",
     page_icon="🏨",
     layout="wide",
     initial_sidebar_state="expanded"
